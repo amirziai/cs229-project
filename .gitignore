@@ -107,7 +107,6 @@ jiant/data/
 jiant/embeddings/
 jiant/gcp/
 jiant/tutorials/
-jiant/
 jiant/tests/
 jiant/probing/
 jiant/my_exp/
