@@ -22,5 +22,4 @@ python3 experiments.py
 - Video
 
 ## References
-1. [jiant](https://github.com/nyu-mll/jiant)
-
+- [jiant](https://github.com/nyu-mll/jiant)

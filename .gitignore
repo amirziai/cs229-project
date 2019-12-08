@@ -111,3 +111,5 @@ jiant/tests/
 jiant/probing/
 jiant/my_exp/
 jiant/my-experiment/
+jiant/exp*/
+results/

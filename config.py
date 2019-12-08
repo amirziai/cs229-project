@@ -1,35 +1,46 @@
-from typing import Dict
+from typing import Dict, List
 
 # global
 experiment_name = 'exp1'
-runs = 5
+n_runs = 5
 d_word = 300
 lr = 0.0003
 max_seq_len = 20
 max_word_v_size = 100000
+n_jobs = 8
+
+ExperimentParam = Dict[str, str]
 
 
-class Exp:
-    def __init__(self, n_runs: int,
-                 exp_name: str,
-                 run_name: str,
-                 experiment_parameters: Dict):
-        self.runs = n_runs
-        self.exp_name = exp_name
+class Experiment:
+    def __init__(self, run_name: str, params: ExperimentParam):
         self.run_name = run_name
-        self.experiment_parameters = experiment_parameters
+        self.params = params
 
+
+# experiment type
+Experiments = List[Experiment]
 
 # per
-experiments = [
+experiments: Experiments = [
     # Exp(n_runs=runs, exp_name=experiment_name, run_name='run1', experiment_parameters={
-    #     'tasks': 'sst,mrpc',
+    #     'pretrain_tasks': '"sst,mrpc"',
     #     'weighting': 'uniform',  # epsilon, ucb
     #     # other stuff
     # }),
-    Exp(n_runs=runs, exp_name=experiment_name, run_name='run2', experiment_parameters={
-        'tasks': 'sst,sts-b',
-        'weighting': 'uniform',  # epsilon, ucb
+    # {
+    #     'pretrain_tasks': 'sst,sts-b',
+    #     'weighting': 'uniform',  # epsilon, ucb
+    #     # other stuff
+    # },
+    # Experiment(run_name='run4', params={
+    #     'pretrain_tasks': '"sst,sts-b"',
+    #     'weighting': 'uniform',  # epsilon, ucb
+    #     # other stuff
+    # })
+    Experiment(run_name='run6', params={
+        'pretrain_tasks': '"sst,qqp"',
+        'weighting': 'proportional',  # epsilon, ucb
         # other stuff
-    }),
+    })
 ]

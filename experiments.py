@@ -2,20 +2,31 @@ import os
 from typing import List
 
 import pandas as pd
-from jiant.__main__ import main as jiant_main
+from joblib import Parallel, delayed
+
 import config
+from jiant.__main__ import main as jiant_main
+
+
 # from utils import log
 
 
 class Experiment:
     def __init__(self,
-                 experiment_list: List[config.Exp],
+                 experiment_name: str,
+                 experiments: config.Experiments,
+                 n_runs: int,
+                 n_jobs: int,
                  conf_path: str = 'configs/',
                  results_path: str = 'results/',
                  jiant_path: str = 'jiant/',
                  base_config_path: str = 'jiant/config/tutorial.conf'
                  ):
-        self.experiment_list = experiment_list
+        self.experiment_name = experiment_name
+        self.experiments = experiments
+        self.n_runs = n_runs
+        self.n_jobs = n_jobs
+
         self.conf_path = conf_path
         self.results_path = results_path
         self.jiant_path = jiant_path
@@ -27,19 +38,19 @@ class Experiment:
         os.environ['JIANT_DATA_DIR'] = f'{self.jiant_path}data/'
         os.environ['WORD_EMBS_FILE'] = f'{self.jiant_path}embeddings/crawl-300d-2M.vec'
 
-    def _create_conf_file(self, vals: dict, file_name: str):
+    def _create_conf_file(self, experiment: config.ExperimentParam, file_name: str):
         lines = [l for l in open(f'{self.jiant_path}{self.base_config_path}')]
         out = []
         for line in lines:
 
             k = None
-            for key in vals:
+            for key in experiment:
                 if line.startswith(key):
                     k = key
                     break
 
             if k is not None:
-                out.append(f'{k} = {vals[k]}\n')
+                out.append(f'{k} = {experiment[k]}\n')
             else:
                 out.append(line)
 
@@ -47,7 +58,7 @@ class Experiment:
             f.writelines(out)
 
     @staticmethod
-    def _run(conf_file: str, exp_name: str, run_name: str, run_idx: int):
+    def _run_jiant(conf_file: str, exp_name: str, run_name: str, run_idx: int):
         conf = [
             '--config_file', conf_file,
             '--overrides', f"exp_name = {exp_name}, run_name = {run_name}_{run_idx}"
@@ -79,37 +90,48 @@ class Experiment:
     def _write_csv_out(df: pd.DataFrame, file_path: str) -> None:
         df.to_csv(file_path, index=False)
 
-    @staticmethod
-    def _append_experiment_metadata(df: pd.DataFrame,
-                                    experiment: config.Exp,
+    def _append_experiment_metadata(self,
+                                    df: pd.DataFrame,
+                                    experiment: config.ExperimentParam,
+                                    run_name: str,
                                     run_idx: int) -> pd.DataFrame:
-        df['exp_name'] = experiment.exp_name
-        df['run_name'] = experiment.run_name
+        df['exp_name'] = self.experiment_name
+        df['run_name'] = run_name
         df['run_idx'] = run_idx
 
-        for param, val in experiment.experiment_parameters.items():
+        for param, val in experiment.items():
             df[param] = val
         return df
 
+    def _run_exp(self,
+                 experiment: config.Experiment,
+                 run_idx: int) -> pd.DataFrame:
+        run_name = experiment.run_name
+        conf_file = f'{self.jiant_path}jiant/config/{self.experiment_name}_{run_name}.conf'  # TODO: cleanup paths
+        self._create_conf_file(experiment.params, conf_file)
+        self._run_jiant(conf_file, self.experiment_name, run_name, run_idx)
+        results = self._parse_results(self.experiment_name, run_name, run_idx)
+        results = self._append_experiment_metadata(results, experiment.params, run_name, run_idx)
+        file_path_results = f'{self.results_path}/{self.experiment_name}_{run_name}_{run_idx}.csv'
+        self._write_csv_out(results, file_path_results)
+        return results
+
     def run(self):
-        file_path_results = f'{self.results_path}/{self.experiment_list[0].exp_name}.csv'
-        results_overall = pd.DataFrame()
+        file_path_results_overall = f'{self.results_path}/{self.experiment_name}.csv'
+        results_list: List[pd.DataFrame] = Parallel(n_jobs=self.n_jobs)(
+            delayed(self._run_exp)(experiment, run_idx)
+            for run_name_idx, experiment in enumerate(self.experiments)
+            for run_idx in range(self.n_runs))
+        # results_list = []
+        # for experiment in self.experiments:
+        #     for run_idx in range(self.n_runs):
+        #         results = self._run_exp(experiment, run_idx)
+        #         results_list.append(results)
 
-        for experiment in self.experiment_list:
-            # TODO: clean up the paths
-            conf_file = f'{self.jiant_path}jiant/config/{experiment.exp_name}_{experiment.run_name}.conf'
-
-            for run_idx in range(experiment.runs):
-
-                self._create_conf_file(experiment.experiment_parameters, conf_file)
-                self._run(conf_file, experiment.exp_name, experiment.run_name, run_idx)
-                results = self._parse_results(experiment.exp_name, experiment.run_name, run_idx)
-                results = self._append_experiment_metadata(results, experiment, run_idx)
-                results_overall = pd.concat([results_overall, results])
-                # overwrite the results after each run
-                self._write_csv_out(results_overall, file_path_results)
+        results_overall = pd.concat(results_list)
+        self._write_csv_out(results_overall, file_path_results_overall)
 
 
 if __name__ == '__main__':
-    exp = Experiment(config.experiments)
+    exp = Experiment(config.experiment_name, config.experiments, config.n_runs, config.n_jobs)
     exp.run()
