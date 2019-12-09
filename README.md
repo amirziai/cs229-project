@@ -16,6 +16,11 @@ Run the experiments:
 python3 experiments.py
 ```
 
+## Changes to `jiant`
+The following files are changed or added to enable bandits for selecting batches in the main training loop:
+- `jiant/jiant/trainer.py`
+- `jiant/jiant/bandits.py`
+
 ## Resources
 - Final report
 - Poster
