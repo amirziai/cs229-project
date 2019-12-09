@@ -31,6 +31,7 @@ from jiant.utils.utils import (
     find_last_checkpoint_epoch,
     check_for_previous_checkpoints,
 )  # pylint: disable=import-error
+from jiant.bandits import EpsilonGreedy, UCB
 
 
 def build_trainer_params(args, task_names, phase="pretrain"):
@@ -159,39 +160,6 @@ def build_trainer(
     if train_type == "SamplingMultiTaskTrainer":
         trainer = SamplingMultiTaskTrainer.from_params(model, run_dir, copy.deepcopy(train_params))
     return trainer, train_params, opt_params, schd_params
-
-
-class EpsilonGreedy:
-    def __init__(self, n_actions: int, epsilon: float=0.3):
-        self.epsilon = epsilon
-        self.n_actions = n_actions
-        self.rewards = np.array([0] * n_actions)
-        self.rewards_cnt = np.array([0.0] * n_actions)
-
-    def choose_action(self) -> int:
-        if np.random.rand() <= self.epsilon:
-            return np.random.choice(range(self.n_actions))
-        else:
-            return np.argmax(self.rewards)
-
-    def record_reward(self, reward: float, reward_idx: int) -> None:
-        n = self.rewards_cnt[reward_idx]
-        self.rewards[reward_idx] = (n * self.rewards[reward_idx] + reward) / (n + 1)
-        self.rewards_cnt[reward_idx] += 1
-
-
-class UCB(EpsilonGreedy):
-    def __init__(self, n_actions: int, c: float):
-        super().__init__(n_actions, epsilon=0)
-        self.c = c
-
-    def _pick_arm(self, pull_idx: int):
-        # if all of the arms have been pulled at least once
-        if np.count_nonzero(self.rewards_cnt) == self.n_actions:
-            augmented = self.rewards + self.c * np.sqrt(np.log(pull_idx) / self.rewards_cnt)
-            return np.argmax(augmented)
-        else:
-            return np.argmax(np.array(self.rewards) == 0)
 
 
 class SamplingMultiTaskTrainer:
@@ -616,18 +584,39 @@ class SamplingMultiTaskTrainer:
         log.info("Beginning training with stopping criteria based on metric: %s", stop_metric)
 
         bandit = None
+
+        # TODO: make a param
+        main_task_name = 'sst'
+        main_task_idx = [i for i, task in enumerate(tasks) if task.name == main_task_name][0]
+        print(f'Main task index: {main_task_idx}')
+
         if weighting_method == 'epsilon':
+            log.info('Initialized epsilon')
             bandit = EpsilonGreedy(n_actions=len(tasks))
         elif weighting_method == 'ucb':
+            log.info('Initialized ucb')
             bandit = UCB(n_actions=len(tasks), c=0.05)
+        elif weighting_method == 'round_robin':
+            # repeat tasks
+            q = tasks * validation_interval
+            samples = np.array(q[:validation_interval])
 
+        prev = {task.name: 0 for task in tasks}
+        task_idx = -1
+
+        cnt = 1
         while not should_stop:
             self._model.train()
 
-            task_idx = -1
+            # if task_idx == -1:
+            #     # force this
+            #     task = tasks[main_task_idx]
+            #     task_idx = main_task_idx
             if weighting_method in {'epsilon', 'ucb'}:
-                task_idx = bandit.choose_action()
+                task_idx = bandit.choose_action(cnt)
+                cnt += 1
                 task = tasks[task_idx]
+                log.info(f'{weighting_method} chose task: {task.name}, rewards state: {bandit.rewards}')
             else:
                 task = samples[(n_step + offset) % validation_interval]  # randomly select a task
 
@@ -669,6 +658,26 @@ class SamplingMultiTaskTrainer:
             task_info["n_batches_since_val"] = n_batches_since_val
             task_info["total_batches_trained"] = total_batches_trained
             task_info["loss"] = tr_loss
+
+            # action reward
+            if bandit is not None:
+                m = {("%s_loss" % task.name): 0.0 for task in tasks}
+                m["macro_avg"] = 0.0
+                m["micro_avg"] = 0.0
+
+                _, _, all_val_metrics = self._calculate_validation_performance(
+                    tasks[main_task_idx], task_infos, tasks, batch_size, m, 0.0
+                )
+
+                # value = task.get_metrics()['f1']
+                value = all_val_metrics[f'{main_task_name}_f1']
+                # diff = value - prev[task.name]
+                diff = value - prev[main_task_name]
+                log.info(f'{weighting_method} value: {value} and diff: {diff}')
+                bandit.record_reward(diff, task_idx)
+                log.info(f'{weighting_method} state after record, '
+                         f'reward: {bandit.rewards} and counts: {bandit.rewards_cnt} where {task_names}')
+                prev[task.name] = value
 
             # Intermediate log to logger and tensorboard
             if time.time() - task_info["last_log"] > self._log_interval:
@@ -739,11 +748,8 @@ class SamplingMultiTaskTrainer:
                     if name in all_tr_metrics:
                         log_str += " training: %3f" % all_tr_metrics[name]
                     log_str += " validation: %3f" % value
-
-                    if idx == 0 and bandit is not None:  # TODO: is idx == 0 the one i want?
-                        bandit.record_reward(value, task_idx)
-
                     log.info(log_str)
+
                 if self._TB_dir is not None:
                     self._metrics_to_tensorboard_val(n_step, all_val_metrics)
                 log.info(f"Global learning rate: {self._optimizer.param_groups[0]['lr']}")

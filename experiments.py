@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 from joblib import Parallel, delayed
 
-import config
+import config_exp1 as config
 from jiant.__main__ import main as jiant_main
 
 
@@ -122,11 +122,6 @@ class Experiment:
             delayed(self._run_exp)(experiment, run_idx)
             for run_name_idx, experiment in enumerate(self.experiments)
             for run_idx in range(self.n_runs))
-        # results_list = []
-        # for experiment in self.experiments:
-        #     for run_idx in range(self.n_runs):
-        #         results = self._run_exp(experiment, run_idx)
-        #         results_list.append(results)
 
         results_overall = pd.concat(results_list)
         self._write_csv_out(results_overall, file_path_results_overall)

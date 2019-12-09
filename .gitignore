@@ -113,3 +113,6 @@ jiant/my_exp/
 jiant/my-experiment/
 jiant/exp*/
 results/
+jiant/jiant/config/
+
+.DS_Store

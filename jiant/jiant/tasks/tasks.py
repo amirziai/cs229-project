@@ -1823,9 +1823,25 @@ class QNLITask(PairClassificationTask):
         self.path = path
         self.max_seq_len = max_seq_len
 
+        self.scorer2 = F1Measure(1)
+        self.scorers = [self.scorer1, self.scorer2]
+        self.val_metric = "%s_acc_f1" % name
+
         self.train_data_text = None
         self.val_data_text = None
         self.test_data_text = None
+
+    def get_metrics(self, reset=False):
+        """Get metrics specific to the task"""
+        acc = self.scorer1.get_metric(reset)
+        pcs, rcl, f1 = self.scorer2.get_metric(reset)
+        return {
+            "acc_f1": (acc + f1) / 2,
+            "accuracy": acc,
+            "f1": f1,
+            "precision": pcs,
+            "recall": rcl,
+        }
 
     def load_data(self):
         """Load the data"""
