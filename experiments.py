@@ -110,12 +110,16 @@ class Experiment:
         run_name = experiment.run_name
         conf_file = f'{self.jiant_path}jiant/config/{self.experiment_name}_{run_name}.conf'  # TODO: cleanup paths
         self._create_conf_file(experiment.params, conf_file)
-        self._run_jiant(conf_file, self.experiment_name, run_name, run_idx)
-        results = self._parse_results(self.experiment_name, run_name, run_idx)
-        results = self._append_experiment_metadata(results, experiment.params, run_name, run_idx)
-        file_path_results = f'{self.results_path}/{self.experiment_name}_{run_name}_{run_idx}.csv'
-        self._write_csv_out(results, file_path_results)
-        return results
+        try:
+            self._run_jiant(conf_file, self.experiment_name, run_name, run_idx)
+            results = self._parse_results(self.experiment_name, run_name, run_idx)
+            results = self._append_experiment_metadata(results, experiment.params, run_name, run_idx)
+            file_path_results = f'{self.results_path}/{self.experiment_name}_{run_name}_{run_idx}.csv'
+            self._write_csv_out(results, file_path_results)
+            return results
+        except Exception as e:
+            print('Error', e)
+            return pd.DataFrame()
 
     def run(self):
         file_path_results_overall = f'{self.results_path}/{self.experiment_name}.csv'
