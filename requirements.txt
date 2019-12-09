@@ -8,3 +8,5 @@ nltk
 sacremoses
 scipy
 overrides
+jsondiff
+pyhocon

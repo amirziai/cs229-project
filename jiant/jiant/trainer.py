@@ -665,19 +665,23 @@ class SamplingMultiTaskTrainer:
                 m["macro_avg"] = 0.0
                 m["micro_avg"] = 0.0
 
-                _, _, all_val_metrics = self._calculate_validation_performance(
-                    tasks[main_task_idx], task_infos, tasks, batch_size, m, 0.0
-                )
+                try:
+                    _, _, all_val_metrics = self._calculate_validation_performance(
+                        tasks[main_task_idx], task_infos, tasks, batch_size, m, 0.0
+                    )
+                    value = all_val_metrics[f'{main_task_name}_f1']
+                    # diff = value - prev[task.name]
+                    diff = value - prev[main_task_name]
+                    log.info(f'{weighting_method} value: {value} and diff: {diff}')
+                    bandit.record_reward(diff, task_idx)
+                    log.info(f'{weighting_method} state after record, '
+                             f'reward: {bandit.rewards} and counts: {bandit.rewards_cnt} where {task_names}')
+                    prev[task.name] = value
+                except Exception as e:
+                    log.error('ERROR!!!', e)
+                    pass
 
                 # value = task.get_metrics()['f1']
-                value = all_val_metrics[f'{main_task_name}_f1']
-                # diff = value - prev[task.name]
-                diff = value - prev[main_task_name]
-                log.info(f'{weighting_method} value: {value} and diff: {diff}')
-                bandit.record_reward(diff, task_idx)
-                log.info(f'{weighting_method} state after record, '
-                         f'reward: {bandit.rewards} and counts: {bandit.rewards_cnt} where {task_names}')
-                prev[task.name] = value
 
             # Intermediate log to logger and tensorboard
             if time.time() - task_info["last_log"] > self._log_interval:
