@@ -4,4 +4,7 @@ joblib
 torch
 allennlp
 tensorboardX
-
+nltk
+sacremoses
+scipy
+overrides

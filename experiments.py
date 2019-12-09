@@ -5,6 +5,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 import config_exp1 as config
+import config as conf
 from jiant.__main__ import main as jiant_main
 
 
@@ -38,7 +39,7 @@ class Experiment:
         os.environ['JIANT_DATA_DIR'] = f'{self.jiant_path}data/'
         os.environ['WORD_EMBS_FILE'] = f'{self.jiant_path}embeddings/crawl-300d-2M.vec'
 
-    def _create_conf_file(self, experiment: config.ExperimentParam, file_name: str):
+    def _create_conf_file(self, experiment: conf.ExperimentParam, file_name: str):
         lines = [l for l in open(f'{self.jiant_path}{self.base_config_path}')]
         out = []
         for line in lines:
@@ -92,7 +93,7 @@ class Experiment:
 
     def _append_experiment_metadata(self,
                                     df: pd.DataFrame,
-                                    experiment: config.ExperimentParam,
+                                    experiment: conf.ExperimentParam,
                                     run_name: str,
                                     run_idx: int) -> pd.DataFrame:
         df['exp_name'] = self.experiment_name

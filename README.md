@@ -13,7 +13,7 @@ pip3 install -r requirements.txt
 
 Run the experiments:
 ```bash
-python3 experiments.py
+PYTHONPATH=jiant/ python3 experiments.py
 ```
 
 ## Changes to `jiant`
