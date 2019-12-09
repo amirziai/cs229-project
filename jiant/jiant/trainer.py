@@ -608,11 +608,11 @@ class SamplingMultiTaskTrainer:
         while not should_stop:
             self._model.train()
 
-            # if task_idx == -1:
-            #     # force this
-            #     task = tasks[main_task_idx]
-            #     task_idx = main_task_idx
-            if weighting_method in {'epsilon', 'ucb'}:
+            if task_idx == -1:
+                # force this
+                task = tasks[main_task_idx]
+                task_idx = main_task_idx
+            elif weighting_method in {'epsilon', 'ucb'}:
                 task_idx = bandit.choose_action(cnt)
                 cnt += 1
                 task = tasks[task_idx]
