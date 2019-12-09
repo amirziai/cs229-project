@@ -90,4 +90,29 @@ experiments: Experiments = [
         'pretrain_tasks': '"sst,qqp,qnli"',
         'weighting_method': 'ucb',
     }),
+    # now prop
+    Experiment(run_name='run19', params={
+        'pretrain_tasks': '"sst,mrpc"',
+        'weighting_method': 'proportional',
+    }),
+    Experiment(run_name='run20', params={
+        'pretrain_tasks': '"sst,qqp"',
+        'weighting_method': 'proportional',
+    }),
+    Experiment(run_name='run21', params={
+        'pretrain_tasks': '"sst,qnli"',
+        'weighting_method': 'proportional',
+    }),
+    Experiment(run_name='run22', params={
+        'pretrain_tasks': '"sst,qqp"',
+        'weighting_method': 'proportional',
+    }),
+    Experiment(run_name='run23', params={
+        'pretrain_tasks': '"sst,qqp,mrpc,qnli"',
+        'weighting_method': 'proportional',
+    }),
+    Experiment(run_name='run24', params={
+        'pretrain_tasks': '"sst,qqp,qnli"',
+        'weighting_method': 'proportional',
+    }),
 ]
