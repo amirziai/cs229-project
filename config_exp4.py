@@ -3,13 +3,13 @@ from typing import List
 from config import Experiment
 
 # global
-experiment_name = 'exp2'
+experiment_name = 'exp4'
 n_runs = 5
 d_word = 300
 lr = 0.0003
 max_seq_len = 20
 max_word_v_size = 100000
-n_jobs = 32
+n_jobs = 16
 
 # experiment type
 Experiments = List[Experiment]
