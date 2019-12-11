@@ -103,3 +103,16 @@ venv.bak/
 # mypy
 .mypy_cache/
 .idea/
+jiant/data/
+jiant/embeddings/
+jiant/gcp/
+jiant/tutorials/
+jiant/tests/
+jiant/probing/
+jiant/my_exp/
+jiant/my-experiment/
+jiant/exp*/
+results/
+jiant/jiant/config/
+
+.DS_Store

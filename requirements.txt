@@ -1,0 +1,12 @@
+numpy
+pandas
+joblib
+torch
+allennlp
+tensorboardX
+nltk
+sacremoses
+scipy
+overrides
+jsondiff
+pyhocon
